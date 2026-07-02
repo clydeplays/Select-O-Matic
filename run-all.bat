@@ -1,0 +1,1 @@
+java -jar SelectOMatic.jar ./data/lists/ships.txt r
