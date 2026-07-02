@@ -1,0 +1,38 @@
+// SELECT-O-MATIC
+Thanks for downloading Select-O-Matic!  The app is pretty simple to operate 
+and update and it is very light on features - but it does its job pretty ok.
+
+// WHAT DOES IT DO?
+It randomly selects a ship and shows a picture of it.  Just launch the app,
+and hit the space bar.  That's it.
+
+// DOES IT HAVE DEPENDENCIES?
+Yes.  You'll need a Java Runtime Environment (JRE) to run the main app.  If you
+want to run the _list_files.py script to update the ship list, you'll also
+need to install Python.
+
+// HOW DO I RUN THE APP?
+Download the .zip file, and doubleclick the 'run-all.bat' script.
+
+// HOW DO I UPDATE THE SHIP LIST?
+1 - Download any new ship images.
+2 - Add the new images to the ./media/pics folder
+3 - Update the ./data/lists/ships.txt file to include the new image files.
+
+    NOTE 1:
+    If you add a LOT of new images, you can run the '_list_ships.py'
+    script and it will generate you a list of all of the ship files 
+    in the ./media/pics folder which you can copy and paste the 
+    output into the ./data/lists/ships.txt file.
+
+    NOTE 2:
+    If you really want to go wild, you can create additional .bat files that
+    refer to specialized lists (destroyers, tiers, whatever) but that can be
+    a bit fiddly, since there's no "ship database" that knows about classes
+    and tiers.
+
+// WHAT IMAGE FILE FORMATS ARE SUPPORTED?
+JPG and PNG images have been tested and are known to work.  I haven't tried
+any others - but they would probably work?
+
+
