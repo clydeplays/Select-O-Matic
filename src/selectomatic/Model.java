@@ -3,13 +3,19 @@ package selectomatic;
 import core.util.file.FileTools;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.Stack;
+
 
 public class Model {
 
     private List<ShipImage> m_shipImages;
     private List<ShipImage> m_backup;
-    private Stack<ShipImage> m_history;
+    private final Stack<ShipImage> m_history;
 
     private boolean m_randomize = false;
     private static final Random m_random = new Random();
@@ -90,8 +96,15 @@ public class Model {
     public ShipImage getNextShip() {
 
         if (m_shipImages.isEmpty()) {
-            System.out.println("Refilling from backup (no matches or exhausted list).");
-            m_shipImages = new ArrayList<>(m_backup);
+            System.out.println("Refilling using active filters.");
+
+            applyFilters(); // rebuild from backup using CURRENT filters
+
+            // Safety check: if filters exclude everything
+            if (m_shipImages.isEmpty()) {
+                System.out.println("No ships match current filters.");
+                return null;
+            }
         }
 
         int index = m_randomize
@@ -108,6 +121,11 @@ public class Model {
 
     public ShipImage getPreviousShip() {
         return m_history.isEmpty() ? null : m_history.peek();
+    }
+    
+    
+    public List<ShipImage> getSnapshot() {
+        return new ArrayList<>(m_shipImages);
     }
 
     // =====================================================

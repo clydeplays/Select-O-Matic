@@ -1,41 +1,71 @@
 package selectomatic;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.FontFormatException;
+import java.awt.GraphicsEnvironment;
+import java.awt.Image;
+import java.awt.event.ActionEvent;
+import java.awt.event.ItemListener;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+
 import javax.imageio.ImageIO;
-import javax.swing.*;
+import javax.swing.AbstractAction;
+import javax.swing.ActionMap;
+import javax.swing.ImageIcon;
+import javax.swing.InputMap;
+import javax.swing.JCheckBox;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTabbedPane;
+import javax.swing.KeyStroke;
+import javax.swing.SwingConstants;
 
 public class View {
 
     private Model m_model;
 
+    private final JFrame m_frame;
     private final JLabel m_label;
     private final JLabel m_image;
     private final JLabel m_counter;
-    private final JFrame m_frame;
 
     private final Map<Integer, JCheckBox> tierBoxes = new LinkedHashMap<>();
     private final Map<Nation, JCheckBox> nationBoxes = new LinkedHashMap<>();
     private final Map<ShipClass, JCheckBox> classBoxes = new LinkedHashMap<>();
 
+    // ---------------- LRU IMAGE CACHE ----------------
+    private final Map<ShipImage, ImageIcon> m_cache =
+            new LinkedHashMap<ShipImage, ImageIcon>(32, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<ShipImage, ImageIcon> eldest) {
+                    return size() > 25;
+                }
+            };
+
     public View() {
+        m_frame = new JFrame();
         m_label = new JLabel();
         m_image = new JLabel();
         m_counter = new JLabel();
-        m_frame = new JFrame();
     }
 
     public void setup(Model dataModel, String frameTitle) throws IOException {
 
-        // ================= MODEL =================
         m_model = dataModel;
 
-        // ================= TITLE =================
+        // ---------------- HEADER ----------------
         m_label.setText(" Select-O-Matic!");
-        m_label.setHorizontalAlignment(JLabel.CENTER);
+        m_label.setHorizontalAlignment(SwingConstants.CENTER);
         m_label.setIcon(new ImageIcon("./media/clyde.png"));
 
         Font font;
@@ -46,39 +76,36 @@ public class View {
                     .deriveFont(72f)
                     .deriveFont(Font.BOLD);
             ge.registerFont(font);
-        } catch (Exception e) {
+        } catch (FontFormatException | IOException e) {
             font = m_label.getFont().deriveFont(72f).deriveFont(Font.BOLD);
         }
+
         m_label.setFont(font);
 
-        // ================= COUNTER =================
-        m_counter.setHorizontalAlignment(JLabel.CENTER);
+        // ---------------- COUNTER ----------------
+        m_counter.setHorizontalAlignment(SwingConstants.CENTER);
         m_counter.setFont(new Font("SansSerif", Font.BOLD, 16));
         updateCounter();
 
-        // ================= FRAME =================
-        ImageIcon appIcon = new ImageIcon(ImageIO.read(new File("./media/appicon.png")));
-
+        // ---------------- FRAME ----------------
         m_frame.setTitle(frameTitle);
-        m_frame.setIconImage(appIcon.getImage());
         m_frame.setPreferredSize(new Dimension(1280, 840));
         m_frame.setResizable(false);
         m_frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        // ================= IMAGE TAB =================
+        // ---------------- IMAGE PANEL ----------------
         JPanel imagePanel = new JPanel(new BorderLayout());
-        m_image.setHorizontalAlignment(JLabel.CENTER);
+        m_image.setHorizontalAlignment(SwingConstants.CENTER);
         imagePanel.add(m_image, BorderLayout.CENTER);
 
-        // ================= FILTER TAB =================
+        // ---------------- FILTER PANEL ----------------
         JPanel filterPanel = buildFilterPanel();
 
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Ship", imagePanel);
         tabs.addTab("Filters", filterPanel);
 
-        // ================= LAYOUT =================
-
+        // ---------------- LAYOUT ----------------
         JPanel north = new JPanel(new BorderLayout());
         north.add(m_label, BorderLayout.CENTER);
 
@@ -90,7 +117,7 @@ public class View {
         m_frame.add(tabs, BorderLayout.CENTER);
         m_frame.add(south, BorderLayout.SOUTH);
 
-        // ================= SPACEBAR =================
+        // ---------------- SPACEBAR ACTION ----------------
         InputMap im = m_frame.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         ActionMap am = m_frame.getRootPane().getActionMap();
 
@@ -99,14 +126,59 @@ public class View {
         am.put("NEXT_SHIP", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                showNextShip();
+
+                ShipImage si = m_model.getNextShip();
+
+                // 🔒 If exhausted under current filter set
+                if (si == null) {
+
+                    // force model to rebuild using CURRENT filters
+                    applyFilters();
+
+                    si = m_model.getNextShip();
+
+                    // if STILL null → no ships match filters at all
+                    if (si == null) {
+                        return;
+                    }
+                }
+
+                showShip(si);
                 updateCounter();
             }
         });
 
-        // ================= SHOW =================
         m_frame.pack();
         m_frame.setVisible(true);
+    }
+
+    // =====================================================
+    // DISPLAY IMAGE (WITH CACHE)
+    // =====================================================
+
+    private void showShip(ShipImage si) {
+
+        if (si == null) return;
+
+        ImageIcon icon = m_cache.get(si);
+
+        if (icon == null) {
+            try {
+                Image img = ImageIO.read(si.getFile());
+                Image scaled = img.getScaledInstance(1280, 720, Image.SCALE_SMOOTH);
+                icon = new ImageIcon(scaled);
+                m_cache.put(si, icon);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+        }
+
+        m_image.setIcon(icon);
+
+        String name = si.getName();
+        String[] parts = name.split("\\.");
+        m_label.setText("  " + parts[0]);
     }
 
     // =====================================================
@@ -116,27 +188,30 @@ public class View {
     private JPanel buildFilterPanel() {
 
         JPanel root = new JPanel(new BorderLayout());
-        JPanel columns = new JPanel(new GridLayout(1, 3));
+        JPanel columns = new JPanel(new java.awt.GridLayout(1, 3));
 
-        Font headerFont = new Font("SansSerif", Font.BOLD, 16);
+        Font headerFont = new Font("SansSerif", Font.BOLD, 20);
 
-        // ---------------- TIER ----------------
         JPanel tierPanel = new JPanel();
-        tierPanel.setLayout(new BoxLayout(tierPanel, BoxLayout.Y_AXIS));
+        tierPanel.setLayout(new javax.swing.BoxLayout(tierPanel, javax.swing.BoxLayout.Y_AXIS));
 
         JLabel tierLabel = new JLabel("Tiers");
         tierLabel.setFont(headerFont);
         tierPanel.add(tierLabel);
 
         for (int i = 1; i <= 11; i++) {
-            JCheckBox cb = new JCheckBox(String.valueOf(i), true);
+            JCheckBox cb;
+            if (i == 11) {
+                cb = new JCheckBox("★", true);
+            } else {
+                cb = new JCheckBox(String.valueOf(i), true);
+            }
             tierBoxes.put(i, cb);
             tierPanel.add(cb);
         }
 
-        // ---------------- NATION ----------------
         JPanel nationPanel = new JPanel();
-        nationPanel.setLayout(new BoxLayout(nationPanel, BoxLayout.Y_AXIS));
+        nationPanel.setLayout(new javax.swing.BoxLayout(nationPanel, javax.swing.BoxLayout.Y_AXIS));
 
         JLabel nationLabel = new JLabel("Nations");
         nationLabel.setFont(headerFont);
@@ -148,9 +223,8 @@ public class View {
             nationPanel.add(cb);
         }
 
-        // ---------------- CLASS ----------------
         JPanel classPanel = new JPanel();
-        classPanel.setLayout(new BoxLayout(classPanel, BoxLayout.Y_AXIS));
+        classPanel.setLayout(new javax.swing.BoxLayout(classPanel, javax.swing.BoxLayout.Y_AXIS));
 
         JLabel classLabel = new JLabel("Classes");
         classLabel.setFont(headerFont);
@@ -166,11 +240,10 @@ public class View {
         columns.add(nationPanel);
         columns.add(classPanel);
 
-        // ---------------- BUTTONS ----------------
         JPanel buttons = new JPanel();
 
-        JButton all = new JButton("Select All");
-        JButton none = new JButton("Select None");
+        javax.swing.JButton all = new javax.swing.JButton("Select All");
+        javax.swing.JButton none = new javax.swing.JButton("Select None");
 
         all.addActionListener(e -> setAll(true));
         none.addActionListener(e -> setAll(false));
@@ -178,7 +251,6 @@ public class View {
         buttons.add(all);
         buttons.add(none);
 
-        // ---------------- LISTENER ----------------
         ItemListener listener = e -> {
             applyFilters();
             updateCounter();
@@ -195,7 +267,7 @@ public class View {
     }
 
     // =====================================================
-    // FILTER ACTIONS
+    // FILTER LOGIC
     // =====================================================
 
     private void setAll(boolean state) {
@@ -241,33 +313,5 @@ public class View {
                 + " / "
                 + m_model.getTotalShipCount()
         );
-    }
-
-    // =====================================================
-    // DISPLAY
-    // =====================================================
-
-    private void showNextShip() {
-
-        ShipImage si = m_model.getNextShip();
-
-        if (si == null) {
-            m_label.setText("No ships match the selected filters.");
-            m_image.setIcon(null);
-            return;
-        }
-
-        String name = si.getName();
-        String[] parts = name.split("\\.");
-        m_label.setText("  " + parts[0]);
-
-        try {
-            ImageIcon icon = new ImageIcon(ImageIO.read(si.getFile()));
-            Image img = icon.getImage();
-            Image scaled = img.getScaledInstance(1280, 720, Image.SCALE_SMOOTH);
-            m_image.setIcon(new ImageIcon(scaled));
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
     }
 }
