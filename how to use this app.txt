@@ -14,6 +14,16 @@ need to install Python.
 // HOW DO I RUN THE APP?
 Download the .zip file, and doubleclick the 'run-all.bat' script.
 
+// RANDOM OR ORDERED?
+You can have the app select ships randomly or in the order they are listed in
+the ship list file.
+
+Use this command for 'random' mode:
+    java -jar SelectOMatic.jar ./data/lists/ships.txt r
+
+And this for 'ordered' mode:
+    java -jar SelectOMatic.jar ./data/lists/ships.txt o
+
 // HOW DO I UPDATE THE SHIP LIST?
 1 - Download any new ship images.
 2 - Add the new images to the ./media/pics folder
