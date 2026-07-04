@@ -4,153 +4,132 @@ import core.util.file.FileTools;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
-/**
- * The data model that tracks what ship is next.
- * Now supports filtering by tier, nation, and ship class.
- */
 public class Model {
 
-    /** All ships loaded from disk (never modified). */
-    private final List<ShipImage> m_allShips;
+    private List<ShipImage> m_shipImages;
+    private List<ShipImage> m_backup;
+    private Stack<ShipImage> m_history;
 
-    /** Ships currently eligible based on filters. */
-    private List<ShipImage> m_availableShips;
+    private boolean m_randomize = false;
+    private static final Random m_random = new Random();
 
-    /** Ships already shown (prevents repeats until reset). */
-    private List<ShipImage> m_remainingShips;
+    // ================= FILTER STATE =================
+    private Set<Integer> m_selectedTiers = new HashSet<>();
+    private Set<Nation> m_selectedNations = new HashSet<>();
+    private Set<ShipClass> m_selectedClasses = new HashSet<>();
 
-    /** History stack (last shown ships). */
-    private final Stack<ShipImage> m_history;
-
-    /** Filters */
-    private Set<Integer> m_selectedTiers;
-    private Set<Nation> m_selectedNations;
-    private Set<ShipClass> m_selectedClasses;
-
-    private final Random m_random = new Random();
-
-    /**
-     * Constructor
-     * @param listFile
-     * @param randomize
-     * @throws java.io.IOException
-     */
     public Model(String listFile, boolean randomize) throws IOException {
 
-        m_allShips = new ArrayList<>();
-        m_availableShips = new ArrayList<>();
-        m_remainingShips = new ArrayList<>();
+        m_shipImages = new ArrayList<>();
+        m_backup = new ArrayList<>();
         m_history = new Stack<>();
+        m_randomize = randomize;
 
-        // Load ships
         if (listFile.equals("all")) {
             File dataDir = new File("./data/");
             File[] allFiles = dataDir.listFiles();
 
-            if (allFiles != null) {
-                for (File file : allFiles) {
-                    if (!file.getAbsolutePath().endsWith(".properties")) {
-                        m_allShips.addAll(readImageFile(file));
-                    }
+            for (File file : allFiles) {
+                if (!file.getAbsolutePath().endsWith(".properties")) {
+                    m_shipImages.addAll(readImageFile(file));
                 }
             }
         } else {
-            m_allShips.addAll(readImageFile(new File(listFile)));
+            m_shipImages.addAll(readImageFile(new File(listFile)));
         }
 
-        // Init filters (ALL enabled by default)
-        m_selectedTiers = new HashSet<>();
-        for (int i = 1; i <= 11; i++) {
-            m_selectedTiers.add(i);
-        }
-
-        m_selectedNations = EnumSet.allOf(Nation.class);
-        m_selectedClasses = EnumSet.allOf(ShipClass.class);
-
-        // Build initial pool
-        rebuildAvailableShips();
+        m_backup = new ArrayList<>(m_shipImages);
     }
 
-    /**
-     * Apply filtering logic and rebuild available ship list.
-     */
-    private void rebuildAvailableShips() {
+    // =====================================================
+    // FILTER UPDATES
+    // =====================================================
 
-        m_availableShips = m_allShips.stream()
-                .filter(s -> m_selectedTiers.contains(s.getTier()))
-                .filter(s -> m_selectedNations.contains(s.getNation()))
-                .filter(s -> m_selectedClasses.contains(s.getShipClass()))
-                .collect(Collectors.toList());
-
-        // Reset remaining pool whenever filters change
-        m_remainingShips = new ArrayList<>(m_availableShips);
-    }
-
-    /**
-     * Update filters
-     * @param tiers
-     */
     public void setSelectedTiers(Set<Integer> tiers) {
-        m_selectedTiers = new HashSet<>(tiers);
-        rebuildAvailableShips();
+        m_selectedTiers = (tiers == null) ? new HashSet<>() : new HashSet<>(tiers);
+        applyFilters();
     }
 
     public void setSelectedNations(Set<Nation> nations) {
-        m_selectedNations = EnumSet.copyOf(nations);
-        rebuildAvailableShips();
+        m_selectedNations = (nations == null) ? new HashSet<>() : new HashSet<>(nations);
+        applyFilters();
     }
 
     public void setSelectedClasses(Set<ShipClass> classes) {
-        m_selectedClasses = EnumSet.copyOf(classes);
-        rebuildAvailableShips();
+        m_selectedClasses = (classes == null) ? new HashSet<>() : new HashSet<>(classes);
+        applyFilters();
     }
 
-    /**
-     * Get next ship (filtered + no-repeat until exhausted)
-     * @return 
-     */
+    // =====================================================
+    // CORE FILTER LOGIC
+    // =====================================================
+
+    private void applyFilters() {
+
+        List<ShipImage> filtered = new ArrayList<>();
+
+        for (ShipImage si : m_backup) {
+
+            boolean tierOk = m_selectedTiers.isEmpty() || m_selectedTiers.contains(si.getTier());
+            boolean nationOk = m_selectedNations.isEmpty() || m_selectedNations.contains(si.getNation());
+            boolean classOk = m_selectedClasses.isEmpty() || m_selectedClasses.contains(si.getShipClass());
+
+            if (tierOk && nationOk && classOk) {
+                filtered.add(si);
+            }
+        }
+
+        m_shipImages = filtered;
+    }
+
+    // =====================================================
+    // SHIP SELECTION
+    // =====================================================
+
     public ShipImage getNextShip() {
 
-        if (m_availableShips.isEmpty()) {
-            return null;
+        if (m_shipImages.isEmpty()) {
+            System.out.println("Refilling from backup (no matches or exhausted list).");
+            m_shipImages = new ArrayList<>(m_backup);
         }
 
-        // Reset cycle if needed
-        if (m_remainingShips.isEmpty()) {
-            m_remainingShips = new ArrayList<>(m_availableShips);
-            System.out.println("Filter cycle complete. Resetting available ships.");
-        }
+        int index = m_randomize
+                ? m_random.nextInt(m_shipImages.size())
+                : 0;
 
-        int index = m_random.nextInt(m_remainingShips.size());
-        ShipImage selected = m_remainingShips.get(index);
+        ShipImage selected = m_shipImages.get(index);
 
-        m_remainingShips.remove(index);
         m_history.push(selected);
+        m_shipImages.remove(index);
 
         return selected;
     }
 
-    /**
-     * Returns last selected ship
-     */
     public ShipImage getPreviousShip() {
-        if (m_history.isEmpty()) {
-            return null;
-        }
-        return m_history.peek();
+        return m_history.isEmpty() ? null : m_history.peek();
     }
 
-    /**
-     * Read ship list file and convert into ShipImage objects
-     */
+    // =====================================================
+    // COUNTERS (NEW)
+    // =====================================================
+
+    public int getAvailableShipCount() {
+        return m_shipImages.size();
+    }
+
+    public int getTotalShipCount() {
+        return m_backup.size();
+    }
+
+    // =====================================================
+    // FILE LOADING
+    // =====================================================
+
     private List<ShipImage> readImageFile(File file) throws IOException {
 
         List<ShipImage> images = new ArrayList<>();
-
-        List<String> imageStrings = new ArrayList<>();
-        imageStrings.addAll(FileTools.readAllLinesFromFile(file.getAbsolutePath()));
+        List<String> imageStrings = FileTools.readAllLinesFromFile(file.getAbsolutePath());
 
         for (String s : imageStrings) {
             ShipImage si = new ShipImage(new File("./media/pics/" + s), s);
