@@ -1,124 +1,201 @@
 package selectomatic;
 
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.FontFormatException;
-import java.awt.GraphicsEnvironment;
-import java.awt.Image;
-import java.awt.event.ActionEvent;
-import java.awt.event.KeyEvent;
+import java.awt.*;
+import java.awt.event.*;
 import java.io.File;
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.*;
 import javax.imageio.ImageIO;
-import javax.swing.AbstractAction;
-import javax.swing.ImageIcon;
-import javax.swing.JComponent;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 
-/**
- * 
- * @author Clyde Plays
- */
 public class View {
 
-    /** The Label. */
     private final JLabel m_label;
-    
-    /** The Image. */
     private final JLabel m_image;
-    
-    /** A window to contain it all. */
     private final JFrame m_frame;
-    
-    /** Initialize view variables. */
-    public View(){
+
+    private final Map<Integer, JCheckBox> tierBoxes = new LinkedHashMap<>();
+    private final Map<Nation, JCheckBox> nationBoxes = new LinkedHashMap<>();
+    private final Map<ShipClass, JCheckBox> classBoxes = new LinkedHashMap<>();
+
+    public View() {
         m_label = new JLabel();
         m_image = new JLabel();
         m_frame = new JFrame();
     }
-    
-    /**
-     * Create and initialize all of the components of the application.
-     * @param dataModel the backing data model that contains the ships.
-     * @param frameTitle the title to put in the JFrame window.
-     * @throws IOException files are involved, may throw an error while we set up and read pics, fonts, etc.
-     */
+
     public void setup(Model dataModel, String frameTitle) throws IOException {
-        // --- Initialize the JLabel
+
+        // ================= LABEL =================
         m_label.setText(" Select-O-Matic!");
         m_label.setHorizontalAlignment(JLabel.CENTER);
-        m_label.setVerticalAlignment(JLabel.CENTER);
         m_label.setIcon(new ImageIcon("./media/clyde.png"));
-        
-        // --- Set the Font
+
         Font font;
         try {
             GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-            font = Font.createFont(Font.TRUETYPE_FONT, new File("./media/WarHeliosCondCBold.ttf"));
-            font = font.deriveFont(72.0f).deriveFont(Font.BOLD);
+            font = Font.createFont(Font.TRUETYPE_FONT,
+                    new File("./media/WarHeliosCondCBold.ttf"))
+                    .deriveFont(72f)
+                    .deriveFont(Font.BOLD);
             ge.registerFont(font);
-        } catch (IOException|FontFormatException e) {
-            // This is lame, and poor error handling, but this is a dirt-simple app.  Shrug.
-            e.printStackTrace();
-            font = m_label.getFont().deriveFont(72.0f).deriveFont(Font.BOLD);
+        } catch (Exception e) {
+            font = m_label.getFont().deriveFont(72f).deriveFont(Font.BOLD);
         }
         m_label.setFont(font);
-        
-        // Read Application Icon Image File
+
+        // ================= FRAME =================
         ImageIcon appIcon = new ImageIcon(ImageIO.read(new File("./media/appicon.png")));
-        
-        // Lay it out in the Frame.
+
         m_frame.setTitle(frameTitle);
         m_frame.setIconImage(appIcon.getImage());
         m_frame.setPreferredSize(new Dimension(1280, 840));
         m_frame.setResizable(false);
         m_frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        
-        
-        // Set Keybindings
-        String nextShipKey = "Next Ship";
-        m_label.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0, true ), nextShipKey);
-        AbstractAction nextShip = new AbstractAction(){
+
+        // ================= IMAGE VIEW =================
+        JPanel imagePanel = new JPanel(new BorderLayout());
+        m_image.setHorizontalAlignment(JLabel.CENTER);
+        imagePanel.add(m_image, BorderLayout.CENTER);
+
+        // ================= FILTER PANEL =================
+        JPanel filterPanel = buildFilterPanel(dataModel);
+
+        // ================= TABS =================
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.addTab("Ship", imagePanel);
+        tabs.addTab("Filters", filterPanel);
+
+        // ================= LAYOUT =================
+        m_frame.setLayout(new BorderLayout());
+        m_frame.add(m_label, BorderLayout.NORTH);
+        m_frame.add(tabs, BorderLayout.CENTER);
+
+        // ================= SPACEBAR =================
+        InputMap im = m_frame.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        ActionMap am = m_frame.getRootPane().getActionMap();
+
+        im.put(KeyStroke.getKeyStroke("SPACE"), "NEXT_SHIP");
+
+        am.put("NEXT_SHIP", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                SwingUtilities.invokeLater(new Runnable(){
-                    @Override
-                    public void run() {
-                        // Get the Next ShipImage
-                        ShipImage si = dataModel.getNextShip();
-                        String name = si.getName();
-                        System.out.println("Name:  " + name);
-                        String parts[] = name.split("\\.");
-                        m_label.setText("  " + parts[0]);
-                        try {
-                            ImageIcon icon = new ImageIcon(ImageIO.read(si.getFile()));
-                            Image img = icon.getImage();
-                            Image scaled_img = img.getScaledInstance(1280, 720,  java.awt.Image.SCALE_SMOOTH);
-                            icon = new ImageIcon(scaled_img);
-                            m_image.setIcon(icon);
-                        } catch (IOException ex) {
-                            Logger.getLogger(SelectOMatic.class.getName()).log(Level.SEVERE,"Error finding ship image file.", ex);
-                        }
-                    }
-                });
+                showNextShip(dataModel);
             }
-        };
+        });
 
-        // Set Action map on label
-        m_label.getActionMap().put(nextShipKey, nextShip);
-        
-        // Layout Components
-        m_frame.setLayout(new BorderLayout());
-        m_frame.add(m_label, BorderLayout.PAGE_START);
-        m_frame.add(m_image, BorderLayout.CENTER);
+        // ================= SHOW =================
         m_frame.pack();
         m_frame.setVisible(true);
     }
-    
+
+    // =====================================================
+    // FILTER UI (3 COLUMNS)
+    // =====================================================
+
+    private JPanel buildFilterPanel(Model model) {
+
+        JPanel root = new JPanel(new GridLayout(1, 3));
+
+        // -------- TIER COLUMN --------
+        JPanel tierPanel = new JPanel();
+        tierPanel.setLayout(new BoxLayout(tierPanel, BoxLayout.Y_AXIS));
+        tierPanel.add(new JLabel("Tiers"));
+
+        for (int i = 1; i <= 11; i++) {
+            JCheckBox cb = new JCheckBox(String.valueOf(i), true);
+            tierBoxes.put(i, cb);
+            tierPanel.add(cb);
+        }
+
+        // -------- NATION COLUMN --------
+        JPanel nationPanel = new JPanel();
+        nationPanel.setLayout(new BoxLayout(nationPanel, BoxLayout.Y_AXIS));
+        nationPanel.add(new JLabel("Nations"));
+
+        for (Nation n : Nation.values()) {
+            JCheckBox cb = new JCheckBox(n.getName(), true);
+            nationBoxes.put(n, cb);
+            nationPanel.add(cb);
+        }
+
+        // -------- CLASS COLUMN --------
+        JPanel classPanel = new JPanel();
+        classPanel.setLayout(new BoxLayout(classPanel, BoxLayout.Y_AXIS));
+        classPanel.add(new JLabel("Classes"));
+
+        for (ShipClass sc : ShipClass.values()) {
+            JCheckBox cb = new JCheckBox(sc.getName(), true);
+            classBoxes.put(sc, cb);
+            classPanel.add(cb);
+        }
+
+        root.add(tierPanel);
+        root.add(nationPanel);
+        root.add(classPanel);
+
+        // listener
+        ItemListener listener = e -> updateFilters(model);
+
+        tierBoxes.values().forEach(cb -> cb.addItemListener(listener));
+        nationBoxes.values().forEach(cb -> cb.addItemListener(listener));
+        classBoxes.values().forEach(cb -> cb.addItemListener(listener));
+
+        return root;
+    }
+
+    // =====================================================
+    // FILTER UPDATE
+    // =====================================================
+
+    private void updateFilters(Model model) {
+
+        Set<Integer> tiers = new HashSet<>();
+        for (Map.Entry<Integer, JCheckBox> e : tierBoxes.entrySet()) {
+            if (e.getValue().isSelected()) tiers.add(e.getKey());
+        }
+
+        Set<Nation> nations = new HashSet<>();
+        for (Map.Entry<Nation, JCheckBox> e : nationBoxes.entrySet()) {
+            if (e.getValue().isSelected()) nations.add(e.getKey());
+        }
+
+        Set<ShipClass> classes = new HashSet<>();
+        for (Map.Entry<ShipClass, JCheckBox> e : classBoxes.entrySet()) {
+            if (e.getValue().isSelected()) classes.add(e.getKey());
+        }
+
+        model.setSelectedTiers(tiers);
+        model.setSelectedNations(nations);
+        model.setSelectedClasses(classes);
+    }
+
+    // =====================================================
+    // SHIP DISPLAY
+    // =====================================================
+
+    private void showNextShip(Model model) {
+
+        ShipImage si = model.getNextShip();
+
+        if (si == null) {
+            m_label.setText("No ships match the selected filters.");
+            m_image.setIcon(null);
+            return;
+        }
+
+        String name = si.getName();
+        String[] parts = name.split("\\.");
+        m_label.setText("  " + parts[0]);
+
+        try {
+            ImageIcon icon = new ImageIcon(ImageIO.read(si.getFile()));
+            Image img = icon.getImage();
+            Image scaled = img.getScaledInstance(1280, 720, Image.SCALE_SMOOTH);
+            m_image.setIcon(new ImageIcon(scaled));
+
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
 }

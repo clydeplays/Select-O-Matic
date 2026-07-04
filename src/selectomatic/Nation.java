@@ -15,9 +15,9 @@ public enum Nation {
     JPN("Japan"),
     NETH("The Netherlands"),
     PANAM("Pan America"),
-    USA("United States of America"),
+    USA("United States"),
     UK("United Kingdom"),
-    USSR("Union of Soviet Socialistic Republics");
+    USSR("Russia");
     
     /** The long form name of the country*/
     private final String m_name;
