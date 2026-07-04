@@ -56,6 +56,6 @@ public class SelectOMatic {
         // Create the model and view, and start the app.
         m_dataModel = new Model(listFile, randomize);
         m_view = new View();
-        m_view.setup(m_dataModel, "Select-O-Matic v1.4 - by Clyde Plays");
+        m_view.setup(m_dataModel, "Select-O-Matic v1.5 - by Clyde Plays");
     }
 }

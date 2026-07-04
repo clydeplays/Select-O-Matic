@@ -71,7 +71,7 @@ public class Model {
         
         // If the list of ships to choose from is empty, repopulate it.
         if (m_shipImages.isEmpty()) {
-            //System.out.println("m_shipImages empty, reloading list.");
+            System.out.println("--- LOOP:  Finished all ships in list, repopulating from backup.");
             m_shipImages.addAll(m_backup);
         }
         

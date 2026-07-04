@@ -12,8 +12,17 @@ public class ShipImage {
     private final File m_file;
     
     /** The Name of the ship to display above the image in the app. */
-    private final String m_name;
+    private final Integer m_tier;
     
+    /** The Name of the ship to display above the image in the app. */
+    private final Nation m_nation;
+    
+    /** The Name of the ship to display above the image in the app. */
+    private final ShipClass m_class;
+    
+    /** The Name of the ship to display above the image in the app. */
+    private final String m_name;
+        
     /**
      * An object which represents the ship image and its name.
      * @param filePath - the File object that represents the image itself.
@@ -21,7 +30,18 @@ public class ShipImage {
      */
     public ShipImage(File filePath, String shipName) {
         m_file = filePath;
-        m_name = shipName;
+        
+        // Parse Shipname
+        String[] parts = shipName.split(",");
+        if (parts.length != 4) {
+            throw new IllegalArgumentException("shipName did not have correct number of parts - expected format was: 'T#,Nation,Class,Name' but value was:  " + shipName);
+        }
+        
+        // Initialize the values.
+        m_tier = Integer.valueOf(parts[0]);
+        m_nation = Nation.valueOf(parts[1]);
+        m_class = ShipClass.valueOf(parts[2]);
+        m_name = parts[3];
     }
     
     
@@ -35,10 +55,22 @@ public class ShipImage {
     
     /**
      * Returns the filename as a String.  The file only has the name of the ship and
-     * an extension (such as ".jpg" or ".png" at the end).
+     * includes the file extension (such as ".jpg" or ".png" at the end).
      * @return the filename as a String.
      */
     public String getName() {
         return m_name;
+    }
+    
+    public int getTier() {
+        return m_tier;
+    }
+    
+    public Nation getNation() {
+        return m_nation;
+    }
+    
+    public ShipClass getShipClass() {
+        return m_class;
     }
 }
