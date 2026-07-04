@@ -54,6 +54,7 @@ public class View {
 
     public View() {
         m_frame = new JFrame();
+        m_frame.setIconImage(new ImageIcon("./media/appicon.png").getImage());
         m_label = new JLabel();
         m_image = new JLabel();
         m_counter = new JLabel();
