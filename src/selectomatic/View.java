@@ -1,6 +1,7 @@
 package selectomatic;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -29,6 +30,7 @@ import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
+import javax.swing.border.EmptyBorder;
 
 public class View {
 
@@ -39,9 +41,9 @@ public class View {
     private final JLabel m_image;
     private final JLabel m_counter;
 
-    private final Map<Integer, JCheckBox> tierBoxes = new LinkedHashMap<>();
-    private final Map<Nation, JCheckBox> nationBoxes = new LinkedHashMap<>();
-    private final Map<ShipClass, JCheckBox> classBoxes = new LinkedHashMap<>();
+    private final Map<Integer, JCheckBox> m_tierBoxes = new LinkedHashMap<>();
+    private final Map<Nation, JCheckBox> m_nationBoxes = new LinkedHashMap<>();
+    private final Map<ShipClass, JCheckBox> m_classBoxes = new LinkedHashMap<>();
 
     // ---------------- LRU IMAGE CACHE ----------------
     private final Map<ShipImage, ImageIcon> m_cache =
@@ -68,6 +70,12 @@ public class View {
         m_label.setText(" Select-O-Matic!");
         m_label.setHorizontalAlignment(SwingConstants.CENTER);
         m_label.setIcon(new ImageIcon("./media/clyde.png"));
+        m_label.setBorder(new EmptyBorder(20, 0, 0, 0));
+        
+        // Set Colors
+        m_label.setBackground(new Color(38, 73, 130));
+        m_label.setForeground(new Color(232,232,232));
+        m_label.setOpaque(true);
 
         Font font;
         try {
@@ -90,7 +98,7 @@ public class View {
 
         // ---------------- FRAME ----------------
         m_frame.setTitle(frameTitle);
-        m_frame.setPreferredSize(new Dimension(1280, 840));
+        m_frame.setPreferredSize(new Dimension(1280, 860));
         m_frame.setResizable(false);
         m_frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -207,7 +215,7 @@ public class View {
             } else {
                 cb = new JCheckBox(String.valueOf(i), true);
             }
-            tierBoxes.put(i, cb);
+            m_tierBoxes.put(i, cb);
             tierPanel.add(cb);
         }
 
@@ -220,7 +228,7 @@ public class View {
 
         for (Nation n : Nation.values()) {
             JCheckBox cb = new JCheckBox(n.getName(), true);
-            nationBoxes.put(n, cb);
+            m_nationBoxes.put(n, cb);
             nationPanel.add(cb);
         }
 
@@ -233,7 +241,7 @@ public class View {
 
         for (ShipClass sc : ShipClass.values()) {
             JCheckBox cb = new JCheckBox(sc.getName(), true);
-            classBoxes.put(sc, cb);
+            m_classBoxes.put(sc, cb);
             classPanel.add(cb);
         }
 
@@ -257,9 +265,9 @@ public class View {
             updateCounter();
         };
 
-        tierBoxes.values().forEach(cb -> cb.addItemListener(listener));
-        nationBoxes.values().forEach(cb -> cb.addItemListener(listener));
-        classBoxes.values().forEach(cb -> cb.addItemListener(listener));
+        m_tierBoxes.values().forEach(cb -> cb.addItemListener(listener));
+        m_nationBoxes.values().forEach(cb -> cb.addItemListener(listener));
+        m_classBoxes.values().forEach(cb -> cb.addItemListener(listener));
 
         root.add(columns, BorderLayout.CENTER);
         root.add(buttons, BorderLayout.SOUTH);
@@ -273,9 +281,9 @@ public class View {
 
     private void setAll(boolean state) {
 
-        tierBoxes.values().forEach(cb -> cb.setSelected(state));
-        nationBoxes.values().forEach(cb -> cb.setSelected(state));
-        classBoxes.values().forEach(cb -> cb.setSelected(state));
+        m_tierBoxes.values().forEach(cb -> cb.setSelected(state));
+        m_nationBoxes.values().forEach(cb -> cb.setSelected(state));
+        m_classBoxes.values().forEach(cb -> cb.setSelected(state));
 
         applyFilters();
         updateCounter();
@@ -284,17 +292,17 @@ public class View {
     private void applyFilters() {
 
         Set<Integer> tiers = new HashSet<>();
-        for (Map.Entry<Integer, JCheckBox> e : tierBoxes.entrySet()) {
+        for (Map.Entry<Integer, JCheckBox> e : m_tierBoxes.entrySet()) {
             if (e.getValue().isSelected()) tiers.add(e.getKey());
         }
 
         Set<Nation> nations = new HashSet<>();
-        for (Map.Entry<Nation, JCheckBox> e : nationBoxes.entrySet()) {
+        for (Map.Entry<Nation, JCheckBox> e : m_nationBoxes.entrySet()) {
             if (e.getValue().isSelected()) nations.add(e.getKey());
         }
 
         Set<ShipClass> classes = new HashSet<>();
-        for (Map.Entry<ShipClass, JCheckBox> e : classBoxes.entrySet()) {
+        for (Map.Entry<ShipClass, JCheckBox> e : m_classBoxes.entrySet()) {
             if (e.getValue().isSelected()) classes.add(e.getKey());
         }
 

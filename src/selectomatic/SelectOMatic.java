@@ -12,6 +12,9 @@ import javax.swing.UnsupportedLookAndFeelException;
  */
 public class SelectOMatic {
     
+    /** The version and software name, used in the JFrame header.  */
+    private static final String SW_VERSION = "Select-O-Matic v1.6a - by Clyde Plays";
+    
     /** The backing model for this application. */
     private static Model m_dataModel;
     
@@ -56,6 +59,6 @@ public class SelectOMatic {
         // Create the model and view, and start the app.
         m_dataModel = new Model(listFile, randomize);
         m_view = new View();
-        m_view.setup(m_dataModel, "Select-O-Matic v1.5 - by Clyde Plays");
+        m_view.setup(m_dataModel, SW_VERSION);
     }
 }
