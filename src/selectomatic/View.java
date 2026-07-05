@@ -73,7 +73,7 @@ public class View {
         m_label.setBorder(new EmptyBorder(20, 0, 0, 0));
         
         // Set Colors
-        m_label.setBackground(new Color(38, 73, 130));
+        m_label.setBackground(new Color(40, 75, 130));
         m_label.setForeground(new Color(232,232,232));
         m_label.setOpaque(true);
 
@@ -98,7 +98,7 @@ public class View {
 
         // ---------------- FRAME ----------------
         m_frame.setTitle(frameTitle);
-        m_frame.setPreferredSize(new Dimension(1280, 860));
+        m_frame.setPreferredSize(new Dimension(1280, 920));
         m_frame.setResizable(false);
         m_frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
