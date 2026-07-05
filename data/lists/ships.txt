@@ -581,7 +581,7 @@
 8,USSR,DD,Ognevoi.jpg
 8,USSR,DD,Provorny.jpg
 8,USSR,SS,L-20.jpg
-8,USSR,SS,S-198
+8,USSR,SS,S-189
 9,ASIA,BB,Louchuan.jpg
 9,ASIA,BB,Sun Yat-Sen.jpg
 9,ASIA,BB,Taihang.jpg
