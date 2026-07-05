@@ -682,7 +682,7 @@
 9,UK,BB,Duncan.jpg
 9,UK,BB,Marlborough.jpg
 9,UK,BB,Scarlet Thunder.jpg
-9,UK,CA,Aberdeen.jpg
+9,UK,CL,Aberdeen.jpg
 9,UK,CA,Drake.jpg
 9,UK,CL,AL Neptune.jpg
 9,UK,CL,Cursed Fang (Neptune).jpg
